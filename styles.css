@@ -36,6 +36,26 @@ button {
     cursor: pointer;
 }
 
+.popup{
+    position: fixed;
+    top: -80px;
+    left:50%;
+    transform: translateX(-50%);
+    background: rgb(12, 105, 83);   /* your color */
+    color: white;
+    padding: 12px 22px;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: top 0.4s ease, opacity 0.4s ease;
+    opacity: 0;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.popup.show{
+    top: 30px;
+    opacity: 1;
+}
+
 .weather-info {
     margin-top: 20px;
 }

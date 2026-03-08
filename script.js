@@ -8,13 +8,27 @@ const descriptionElement = document.getElementById('description');
 const humidityElement = document.getElementById('humidity');
 
 searchButton.addEventListener('click', () => {
-    const location = locationInput.value;
+    const location = locationInput.value.trim();
     if (location) {
         fetchWeather(location);
     }else{
-        alert('Please enter a location');
+        showPopup("Please enter a city");
     }
 });
+
+function showPopup(message){
+
+    const popup = document.getElementById("popup");
+
+    popup.textContent = message;
+
+    popup.classList.add("show");
+
+    setTimeout(() => {
+        popup.classList.remove("show");
+    }, 2000);
+
+}
 
 function fetchWeather(location) {
     const url = `${apiUrl}?q=${location}&appid=${apiKey}&units=metric`;
@@ -29,6 +43,6 @@ function fetchWeather(location) {
             humidityElement.textContent = `Humidity: ${data.main.humidity}%`;
         })
         .catch(error => {
-            alert('Error fetching weather data. Couldn\'t find the city');
+            showPopup('Error fetching weather data. Couldn\'t find the city');
         });
 }
