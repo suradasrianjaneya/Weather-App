@@ -1,23 +1,390 @@
-<html lang="en">
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather App</title>
+    <title>AERO | Premium Weather & Analytics Dashboard</title>
+    <!-- Google Fonts: Outfit & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Weather App</h1>
-        <input type="text" id="locationInput" placeholder="Enter a city">
-        <button id="searchButton">Search</button>
-        <div id="popup" class="popup">Please enter a city</div>
-        <div class="weather-info">
-            <h2 id="location"></h2>
-            <p id="temperature"></p>
-            <p id="description"></p>
-            <p id="humidity"></p>
-        </div>
+    <!-- Canvas for Weather Particle Background (Rain, Snow, Clouds, Sunbeams, Stars) -->
+    <canvas id="weather-canvas"></canvas>
+    
+    <!-- Dynamic overlay for animated weather gradients -->
+    <div id="theme-overlay"></div>
+
+    <!-- Main Application Shell -->
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation & Search Panel -->
+        <aside class="sidebar glass">
+            <div class="brand">
+                <i data-lucide="cloud-lightning" class="brand-icon"></i>
+                <span class="brand-name">AERO</span>
+            </div>
+
+            <!-- Search System -->
+            <div class="search-section">
+                <div class="search-box">
+                    <i data-lucide="search" class="search-icon"></i>
+                    <input type="text" id="locationInput" placeholder="Search city..." autocomplete="off">
+                    <button id="searchButton" class="search-btn">
+                        <i data-lucide="arrow-right"></i>
+                    </button>
+                </div>
+                <!-- Autocomplete suggestions -->
+                <div id="search-suggestions" class="suggestions-dropdown glass hidden"></div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="nav-menu">
+                <div class="menu-label">RECENT SEARCHES</div>
+                <div id="recents-list" class="recents-container">
+                    <div class="empty-state">No recent searches</div>
+                </div>
+            </nav>
+
+            <!-- Bottom Settings (Theme Toggle, Units Toggle, Auto location) -->
+            <div class="sidebar-footer">
+                <button id="location-detect-btn" class="footer-btn text-btn" title="Detect Location">
+                    <i data-lucide="map-pin"></i>
+                    <span>Use Current Location</span>
+                </button>
+                <div class="settings-row">
+                    <button id="unit-toggle" class="footer-btn toggle-btn" title="Toggle Units">
+                        <span class="unit-label">Metric (°C)</span>
+                    </button>
+                    <button id="theme-toggle" class="footer-btn icon-btn" title="Toggle Theme">
+                        <i data-lucide="sun" class="theme-icon-light"></i>
+                        <i data-lucide="moon" class="theme-icon-dark"></i>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Dashboard View -->
+        <main class="dashboard-main">
+            <!-- Alert Notification (Popup banner) -->
+            <div id="popup" class="popup-alert glass"></div>
+
+            <div class="dashboard-grid">
+                
+                <!-- Left Panel: Hero and Insights -->
+                <section class="left-panel flex-col">
+                    
+                    <!-- Hero weather card (Cinematic Glassmorphism) -->
+                    <div class="hero-card glass card-reveal">
+                        <div class="hero-header">
+                            <div>
+                                <h1 id="location-name">--</h1>
+                                <p id="current-date">--</p>
+                            </div>
+                        </div>
+
+                        <div class="hero-body">
+                            <div class="temp-row">
+                                <span id="hero-temp">--</span>
+                                <span class="temp-degree">°</span>
+                            </div>
+                            <div class="condition-badge">
+                                <div id="hero-weather-icon" class="animated-weather-icon">
+                                    <i data-lucide="cloud-sun"></i>
+                                </div>
+                                <span id="hero-description">Loading...</span>
+                            </div>
+                        </div>
+
+                        <div class="hero-footer">
+                            <div class="time-block">
+                                <i data-lucide="clock"></i>
+                                <span id="realtime-clock">--:--:--</span>
+                            </div>
+                            <div class="min-max-block">
+                                <span id="hero-min-temp">L: --</span>
+                                <span class="divider">/</span>
+                                <span id="hero-max-temp">H: --</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- AI Insights Section -->
+                    <div class="ai-insights-card glass card-reveal delay-1">
+                        <div class="card-header">
+                            <i data-lucide="sparkles" class="insight-icon"></i>
+                            <h3>AI WEATHER INSIGHTS</h3>
+                        </div>
+                        <div class="insights-body">
+                            <p id="ai-insight-text">Analyzing atmospheric data for local recommendations...</p>
+                        </div>
+                    </div>
+
+                    <!-- Today's Highlights Facts Card -->
+                    <div class="facts-card glass card-reveal delay-2">
+                        <div class="card-header">
+                            <i data-lucide="help-circle" class="fact-icon"></i>
+                            <h3>DID YOU KNOW?</h3>
+                        </div>
+                        <p id="weather-fact">Every minute, about 1 billion tons of water falls as rain on the Earth.</p>
+                    </div>
+
+                </section>
+
+                <!-- Right Panel: Grid metrics, Forecasts, Charts, and Activities -->
+                <section class="right-panel flex-col">
+                    
+                    <!-- Today's Highlights Grid (Advanced Weather Metrics) -->
+                    <div class="section-title-container">
+                        <h2>TODAY'S HIGHLIGHTS</h2>
+                        <span class="pulse-indicator">Live Updates</span>
+                    </div>
+                    
+                    <div class="metrics-grid">
+                        <!-- Card 1: Feels Like -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">FEELS LIKE</span>
+                                <i data-lucide="thermometer"></i>
+                            </div>
+                            <div class="metric-value" id="val-feels-like">--°</div>
+                            <div class="metric-footer" id="desc-feels-like">Loading...</div>
+                        </div>
+
+                        <!-- Card 2: Humidity -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">HUMIDITY</span>
+                                <i data-lucide="droplet"></i>
+                            </div>
+                            <div class="metric-value" id="val-humidity">--%</div>
+                            <div class="metric-progress-bar">
+                                <div class="progress-fill" id="fill-humidity" style="width: 0%"></div>
+                            </div>
+                            <div class="metric-footer" id="desc-humidity">Loading...</div>
+                        </div>
+
+                        <!-- Card 3: Wind speed & Direction -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">WIND SPEED</span>
+                                <i data-lucide="wind"></i>
+                            </div>
+                            <div class="metric-value-row">
+                                <span class="metric-value" id="val-wind">-- m/s</span>
+                                <div class="wind-compass" id="compass-wind">
+                                    <i data-lucide="navigation-2" class="compass-needle"></i>
+                                </div>
+                            </div>
+                            <div class="metric-footer" id="desc-wind">Direction: --</div>
+                        </div>
+
+                        <!-- Card 4: Air Quality Index -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">AIR QUALITY</span>
+                                <i data-lucide="activity"></i>
+                            </div>
+                            <div class="metric-value" id="val-aqi">--</div>
+                            <div class="aqi-meter">
+                                <div class="aqi-meter-fill" id="fill-aqi" style="left: 0%"></div>
+                            </div>
+                            <div class="metric-footer" id="desc-aqi">Loading...</div>
+                        </div>
+
+                        <!-- Card 5: UV Index -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">UV INDEX</span>
+                                <i data-lucide="sun"></i>
+                            </div>
+                            <div class="metric-value" id="val-uv">--</div>
+                            <div class="metric-progress-bar uv-bar">
+                                <div class="progress-fill" id="fill-uv" style="width: 0%"></div>
+                            </div>
+                            <div class="metric-footer" id="desc-uv">Loading...</div>
+                        </div>
+
+                        <!-- Card 6: Visibility -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">VISIBILITY</span>
+                                <i data-lucide="eye"></i>
+                            </div>
+                            <div class="metric-value" id="val-visibility">-- km</div>
+                            <div class="metric-progress-bar">
+                                <div class="progress-fill" id="fill-visibility" style="width: 0%"></div>
+                            </div>
+                            <div class="metric-footer" id="desc-visibility">Loading...</div>
+                        </div>
+
+                        <!-- Card 7: Pressure -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">PRESSURE</span>
+                                <i data-lucide="compass"></i>
+                            </div>
+                            <div class="metric-value" id="val-pressure">-- hPa</div>
+                            <div class="metric-footer" id="desc-pressure">Loading...</div>
+                        </div>
+
+                        <!-- Card 8: Dew Point -->
+                        <div class="metric-card glass card-reveal">
+                            <div class="metric-header">
+                                <span class="metric-title">DEW POINT</span>
+                                <i data-lucide="thermometer-snowflake"></i>
+                            </div>
+                            <div class="metric-value" id="val-dewpoint">--°</div>
+                            <div class="metric-footer" id="desc-dewpoint">Loading...</div>
+                        </div>
+                    </div>
+
+                    <!-- Sunrise & Sunset Visualization -->
+                    <div class="sun-tracker-container card-reveal">
+                        <div class="metric-card sun-tracker-card glass">
+                            <div class="metric-header">
+                                <span class="metric-title">SUNRISE & SUNSET</span>
+                                <i data-lucide="sunset"></i>
+                            </div>
+                            <div class="sun-path-wrapper">
+                                <svg class="sun-path-svg" viewBox="0 0 100 50">
+                                    <path d="M 5,45 A 45,40 0 0,1 95,45" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="2" stroke-dasharray="3,3"></path>
+                                    <path id="sun-path-progress" d="M 5,45 A 45,40 0 0,1 95,45" fill="none" stroke="var(--accent-glow)" stroke-width="2" stroke-dasharray="200" stroke-dashoffset="200"></path>
+                                    <circle id="sun-node" cx="5" cy="45" r="4" fill="var(--accent-glow)" filter="drop-shadow(0 0 4px var(--accent-glow))"></circle>
+                                </svg>
+                                <div class="sun-times-row">
+                                    <div class="sun-time-block text-left">
+                                        <span class="label">Sunrise</span>
+                                        <span class="time" id="sun-sunrise">--:--</span>
+                                    </div>
+                                    <div class="sun-time-block text-right">
+                                        <span class="label">Sunset</span>
+                                        <span class="time" id="sun-sunset">--:--</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div id="sun-time-remaining" class="metric-footer text-center">Sun position tracking inactive</div>
+                        </div>
+                    </div>
+
+                    <!-- Hourly Forecast Section (Horizontal Scroll) -->
+                    <div class="section-title-container">
+                        <h2>HOURLY FORECAST (24H)</h2>
+                    </div>
+                    <div id="hourly-forecast-list" class="hourly-forecast-container scroll-x card-reveal">
+                        <div class="loading-placeholder">Fetching forecast...</div>
+                    </div>
+
+                    <!-- Analytics and Forecast Split -->
+                    <div class="dashboard-split-grid">
+                        
+                        <!-- 7-Day Forecast Card -->
+                        <div class="forecast-7day-card glass card-reveal">
+                            <div class="card-header">
+                                <h3>7-DAY FORECAST</h3>
+                                <i data-lucide="calendar"></i>
+                            </div>
+                            <div id="weekly-forecast-list" class="weekly-list">
+                                <div class="loading-placeholder">Fetching forecast...</div>
+                            </div>
+                        </div>
+
+                        <!-- Data Analytics Graph Section -->
+                        <div class="charts-card glass card-reveal">
+                            <div class="card-header justify-between flex-wrap gap-2">
+                                <h3>FORECAST ANALYTICS</h3>
+                                <div class="chart-tabs">
+                                    <button class="chart-tab active" data-chart="temp">Temp</button>
+                                    <button class="chart-tab" data-chart="rain">Precip %</button>
+                                    <button class="chart-tab" data-chart="wind">Wind</button>
+                                    <button class="chart-tab" data-chart="humidity">Humidity</button>
+                                </div>
+                            </div>
+                            <div class="chart-wrapper">
+                                <canvas id="analyticsChart"></canvas>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Lifestyle Activity Widgets Section -->
+                    <div class="section-title-container">
+                        <h2>LIFESTYLE RECOMMENDATIONS</h2>
+                    </div>
+                    <div class="activities-grid card-reveal">
+                        <div class="activity-widget glass" data-activity="running">
+                            <div class="activity-icon-bg">
+                                <i data-lucide="footprints"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-name">Running</span>
+                                <span class="activity-status" id="act-running">--</span>
+                            </div>
+                        </div>
+
+                        <div class="activity-widget glass" data-activity="cycling">
+                            <div class="activity-icon-bg">
+                                <i data-lucide="bike"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-name">Cycling</span>
+                                <span class="activity-status" id="act-cycling">--</span>
+                            </div>
+                        </div>
+
+                        <div class="activity-widget glass" data-activity="hiking">
+                            <div class="activity-icon-bg">
+                                <i data-lucide="tent"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-name">Hiking</span>
+                                <span class="activity-status" id="act-hiking">--</span>
+                            </div>
+                        </div>
+
+                        <div class="activity-widget glass" data-activity="photography">
+                            <div class="activity-icon-bg">
+                                <i data-lucide="camera"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-name">Photography</span>
+                                <span class="activity-status" id="act-photography">--</span>
+                            </div>
+                        </div>
+
+                        <div class="activity-widget glass" data-activity="driving">
+                            <div class="activity-icon-bg">
+                                <i data-lucide="car"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-name">Driving</span>
+                                <span class="activity-status" id="act-driving">--</span>
+                            </div>
+                        </div>
+
+                        <div class="activity-widget glass" data-activity="beach">
+                            <div class="activity-icon-bg">
+                                <i data-lucide="palmtree"></i>
+                            </div>
+                            <div class="activity-info">
+                                <span class="activity-name">Beach Day</span>
+                                <span class="activity-status" id="act-beach">--</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </section>
+            </div>
+        </main>
     </div>
+
+    <!-- Weather Script logic -->
     <script src="script.js"></script>
 </body>
 </html>
